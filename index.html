@@ -19,44 +19,38 @@ body {
   overflow: hidden;
 }
 
-/* Glow background */
 .glow {
   position: absolute;
   inset: 0;
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(10px);
   background: rgba(255,255,255,0.15);
-  z-index: 0;
 }
 
 .card {
   background: white;
-  padding: 32px 28px;
-  border-radius: 24px;
+  padding: 30px 26px;
+  border-radius: 26px;
   text-align: center;
   box-shadow: 0 25px 60px rgba(230,57,70,0.35);
-  max-width: 90%;
+  max-width: 92%;
   z-index: 2;
 }
 
 h1 {
   color: #e63946;
-  margin-bottom: 16px;
-}
-
-p {
-  font-size: 1rem;
-  line-height: 1.5;
+  margin-bottom: 18px;
 }
 
 button {
   font-size: 1.05rem;
-  padding: 14px 26px;
+  padding: 16px;
   border-radius: 999px;
   border: none;
   cursor: pointer;
-  margin: 10px;
+  margin: 10px auto;
   width: 100%;
-  max-width: 260px;
+  max-width: 280px;
+  transition: all 0.3s ease;
 }
 
 #yes {
@@ -65,24 +59,24 @@ button {
 }
 
 #no {
-  background: #ccc;
-  position: absolute;
+  background: #ddd;
+  color: #444;
+  position: relative;
 }
 
 .hidden { display: none; }
 
-/* Yay text */
 #yay {
-  font-size: 1.6rem;
+  font-size: 1.5rem;
   color: #e63946;
-  margin-top: 15px;
+  margin-top: 10px;
 }
 
-/* Hearts spelling */
+/* Hearts */
 .heart {
   position: absolute;
-  font-size: 22px;
-  animation: floatUp linear infinite;
+  font-size: 20px;
+  animation: floatUp 6s linear forwards;
 }
 
 @keyframes floatUp {
@@ -95,15 +89,25 @@ button {
   position: fixed;
   width: 8px;
   height: 8px;
-  background: red;
-  animation: confettiFall 3s linear forwards;
+  animation: fall 3s linear forwards;
 }
 
-@keyframes confettiFall {
+@keyframes fall {
   to {
     transform: translateY(120vh) rotate(720deg);
     opacity: 0;
   }
+}
+
+/* Selected option */
+.selected {
+  transform: scale(1.15);
+  background: #e63946 !important;
+  color: white;
+}
+
+.fade {
+  opacity: 0.3;
 }
 </style>
 </head>
@@ -112,32 +116,29 @@ button {
 
 <div class="glow"></div>
 
-<audio id="music" autoplay loop>
+<audio id="music" loop>
   <source src="iadoreyou.mp3" type="audio/mpeg">
 </audio>
 
 <!-- PAGE 1 -->
 <div class="card" id="page1">
   <h1>Will you be my Valentine,<br>Choochie? 💖</h1>
+
   <button id="yes">Yes 💘</button>
   <button id="no">No 🙈</button>
+
   <div id="yay" class="hidden">Yaaay 💖</div>
 </div>
 
 <!-- PAGE 2 -->
 <div class="card hidden" id="page2">
   <h1>My Valentine ❤️</h1>
-  <p>
-    You have two options to celebrate with me:<br>
-    <em>(subject to availability)</em>
-  </p>
 
   <button id="stay">🛏️ Cozy Staycation ✨</button>
   <button id="dinner">🍷 Dreamy Dinner ✨</button>
 
-  <p style="margin-top:15px;">
-    Choose wisely…<br>
-    I promise I’ll love either answer 💋
+  <p id="finalText" class="hidden" style="margin-top:18px;">
+    📸 Take a screenshot and send it to your pookie 💋
   </p>
 </div>
 
@@ -149,35 +150,40 @@ const page2 = document.getElementById("page2");
 const yay = document.getElementById("yay");
 const music = document.getElementById("music");
 
-// Impossible NO
-noBtn.addEventListener("touchstart", dodge);
-noBtn.addEventListener("mouseover", dodge);
+// Start music on any interaction
+document.body.addEventListener("click", () => {
+  music.play();
+}, { once: true });
 
-function dodge() {
-  noBtn.style.left = Math.random() * (window.innerWidth - 80) + "px";
-  noBtn.style.top = Math.random() * (window.innerHeight - 80) + "px";
+// NO button dodge (visible but impossible)
+noBtn.addEventListener("touchstart", moveNo);
+noBtn.addEventListener("mouseover", moveNo);
+
+function moveNo() {
+  noBtn.style.transform =
+    `translate(${Math.random()*120 - 60}px, ${Math.random()*80 - 40}px)`;
 }
 
 // YES click
 yesBtn.addEventListener("click", () => {
   yay.classList.remove("hidden");
-  confettiBlast();
+  confetti();
+  navigator.vibrate?.(120);
   music.play();
 
   setTimeout(() => {
     page1.classList.add("hidden");
     page2.classList.remove("hidden");
-  }, 1500);
+  }, 1300);
 });
 
 // Confetti
-function confettiBlast() {
-  for (let i = 0; i < 120; i++) {
+function confetti() {
+  for (let i = 0; i < 100; i++) {
     const c = document.createElement("div");
     c.className = "confetti";
     c.style.left = Math.random() * 100 + "vw";
     c.style.background = `hsl(${Math.random()*360},100%,60%)`;
-    c.style.animationDuration = Math.random()*2 + 2 + "s";
     document.body.appendChild(c);
     setTimeout(() => c.remove(), 3000);
   }
@@ -185,22 +191,34 @@ function confettiBlast() {
 
 // Hearts spelling CHOOCHIE
 const letters = "CHOOCHIE".split("");
-let index = 0;
+let idx = 0;
 
-function createHeart() {
-  const heart = document.createElement("div");
-  heart.className = "heart";
-  heart.innerHTML = "💖" + letters[index];
-  heart.style.left = (index * 11 + 5) + "vw";
-  heart.style.animationDuration = "6s";
-  document.body.appendChild(heart);
+setInterval(() => {
+  const h = document.createElement("div");
+  h.className = "heart";
+  h.innerHTML = "💖" + letters[idx];
+  h.style.left = (idx * 12 + 5) + "vw";
+  document.body.appendChild(h);
+  idx = (idx + 1) % letters.length;
+  setTimeout(() => h.remove(), 6000);
+}, 500);
 
-  index = (index + 1) % letters.length;
-  setTimeout(() => heart.remove(), 6000);
+// Page 2 choice logic
+const stay = document.getElementById("stay");
+const dinner = document.getElementById("dinner");
+const finalText = document.getElementById("finalText");
+
+function choose(selected, other) {
+  selected.classList.add("selected");
+  other.classList.add("fade");
+  finalText.classList.remove("hidden");
+  navigator.vibrate?.([80, 50, 80]);
 }
 
-setInterval(createHeart, 450);
+stay.onclick = () => choose(stay, dinner);
+dinner.onclick = () => choose(dinner, stay);
 </script>
 
 </body>
 </html>
+
